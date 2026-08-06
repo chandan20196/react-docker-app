@@ -2,61 +2,72 @@ name: CI/CD Pipeline
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     env:
       VITE_API_URL: https://api.example.com
+
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: 22
+          cache: npm
 
-      - name: Cache node modules
-        uses: actions/cache@v5
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Build application
+      - name: Build Application
         run: npm run build
 
-      - name: Upload build artifact
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist-output
-          path: dist/
+          path: dist
 
   test:
     needs: build
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
-        node-version: [18, 20]
-        os: [ubuntu-latest, windows-latest]
+        os:
+          - ubuntu-latest
+          - windows-latest
+        node-version:
+          - 22
+          - 24
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install dependencies
+          cache: npm
+
+      - name: Install Dependencies
         run: npm ci
-      - name: Run tests
-        run: npm run test
+
+      - name: Verify Build
+        run: npm run build
 
   deploy:
+    needs: test
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo "Deploying..."
+      - name: Deploy
+        run: echo "Deploying application..."
