@@ -28,14 +28,56 @@ jobs:
         with:
           name: dist-output
           path: dist
-          name: Deploy to EC2
-  uses: appleboy/ssh-action@v1.0.0
-  with:
-    host: ${{ secrets.EC2_HOST }}
-    username: ${{ secrets.EC2_USERNAME }}
-    key: ${{ secrets.EC2_SSH_KEY }}
-    script: |
-      docker pull mydockerhubusername/myvitapp:${{ github.sha }}
-      docker stop myvitapp || true
-      docker rm myvitapp || true
-      docker run -d --name myvitapp -p 80:80 mydockerhubusername/myvitapp:${{ github.sha }}
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull mydockerhubusername/myvitapp:${{ github.sha }}
+            docker stop myvitapp || true
+            docker rm myvitapp || true
+            docker run -d --name myvitapp -p 80:80 mydockerhubusername/myvitapp:${{ github.sha }}name: CI/CD Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Application
+        run: npm run build
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-output
+          path: dist
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull mydockerhubusername/myvitapp:${{ github.sha }}
+            docker stop myvitapp || true
+            docker rm myvitapp || true
+            docker run -d --name myvitapp -p 80:80 mydockerhubusername/myvitapp:${{ github.sha }}
