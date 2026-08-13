@@ -28,3 +28,14 @@ jobs:
         with:
           name: dist-output
           path: dist
+          name: Deploy to EC2
+  uses: appleboy/ssh-action@v1.0.0
+  with:
+    host: ${{ secrets.EC2_HOST }}
+    username: ${{ secrets.EC2_USERNAME }}
+    key: ${{ secrets.EC2_SSH_KEY }}
+    script: |
+      docker pull mydockerhubusername/myvitapp:${{ github.sha }}
+      docker stop myvitapp || true
+      docker rm myvitapp || true
+      docker run -d --name myvitapp -p 80:80 mydockerhubusername/myvitapp:${{ github.sha }}
