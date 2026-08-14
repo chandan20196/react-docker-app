@@ -1,4 +1,3 @@
-
 name: CI/CD Pipeline
 
 on:
@@ -44,10 +43,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }}
-
             docker stop myvitapp || true
             docker rm myvitapp || true
-
             docker run -d \
               --name myvitapp \
               -p 80:80 \
