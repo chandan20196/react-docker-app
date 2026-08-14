@@ -8,33 +8,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # 1. Checkout source code
       - name: Checkout
         uses: actions/checkout@v5
 
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
 
+      # 3. Install dependencies
       - name: Install Dependencies
         run: npm install
 
+      # 4. Build application
       - name: Build Application
         run: npm run build
 
+      # 5. Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 6. Build Docker image
       - name: Build Docker Image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }} .
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }} .
 
+      # 7. Push Docker image to Docker Hub
       - name: Push Docker Image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }}
+        run: |
+          docker push \
+            ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }}
 
+      # 8. Deploy to EC2
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
         with:
@@ -42,10 +55,49 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }}
-            docker stop myvitapp || true
-            docker rm myvitapp || true
-            docker run -d \
+            set -e
+
+            echo "Checking Docker installation..."
+
+            # Install Docker if it is not installed
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "Docker not found. Installing Docker..."
+
+              sudo apt-get update
+              sudo apt-get install -y docker.io
+
+              sudo systemctl enable docker
+              sudo systemctl start docker
+
+              echo "Docker installation completed."
+            else
+              echo "Docker is already installed."
+            fi
+
+            echo "Docker version:"
+            sudo docker --version
+
+            echo "Pulling Docker image..."
+
+            sudo docker pull \
+              ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }}
+
+            echo "Stopping old container..."
+
+            sudo docker stop myvitapp || true
+
+            echo "Removing old container..."
+
+            sudo docker rm myvitapp || true
+
+            echo "Starting new container..."
+
+            sudo docker run -d \
               --name myvitapp \
               -p 80:80 \
               ${{ secrets.DOCKERHUB_USERNAME }}/myvitapp:${{ github.sha }}
+
+            echo "Deployment completed."
+
+            echo "Running containers:"
+            sudo docker ps
