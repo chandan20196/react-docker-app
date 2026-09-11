@@ -34,7 +34,7 @@ pipeline {
 
                 sh '''
                     docker rm -f react-frontend || true
-                    docker run -d --name react-frontend -p 8080:5173 my-react-app
+                    docker run -d --name react-frontend -p 8081:5173 my-react-app
                 '''
             }
         }
@@ -43,7 +43,7 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully!'
-            echo 'Application available on port 8080'
+            echo 'Application available on port 8081'
         }
 
         failure {
